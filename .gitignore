@@ -1,0 +1,25 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+dist/
+build/
+coverage/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# ML models and datasets (too large for Git)
+*.pt
+*.safetensors
+data/
+
+# Logs and system files
+*.log
+Thumbs.db
+Desktop.ini
