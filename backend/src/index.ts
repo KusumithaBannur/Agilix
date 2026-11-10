@@ -1,5 +1,6 @@
-import express from "express";
+import express, {type NextFunction, type Request, type Response} from "express";
 import { pool } from "./db.js";
+import { teamsRouter } from "./routes/teams.js";
 
 const app = express();
 const PORT = Number(process.env.PORT?? 3000);
@@ -15,6 +16,19 @@ app.get("/api/health", async (_req, res) => {
     res.status(503).json({ status: "error", database: "unreachable" });
   }
 });
+
+app.use("/api/teams", teamsRouter);
+
+app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    if(error instanceof SyntaxError && "body" in error){
+        res.status(400).json({error: "Request body is not valid JSON"});
+        return;
+    }
+    console.error("Unexpected error:",error);
+    res.status(500).json({error:"Something went wrong"});
+
+});
+
 
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
