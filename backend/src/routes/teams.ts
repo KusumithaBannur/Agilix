@@ -1,57 +1,51 @@
-import {Router} from "express";
-import {z} from "zod";
-import {pool} from "../db.js";
+import { Router } from "express";
+import { z } from "zod";
+import { isDatabaseError, pool } from "../db.js";
+import { idSchema, sendValidationError } from "../validation.js";
 
 export const teamsRouter = Router();
 
 const createTeamSchema = z.object({
-    name: z.string().trim().min(1,"Name is required").max(100,"Name is too long"),
-    hoursPerPoint: z.number().positive("Must be more than 0").max(999.99,"Must be 999.99 or less"),
+  name: z.string().trim().min(1, "Name is required").max(100, "Name is too long"),
+  hoursPerPoint: z.number().positive("Must be more than 0").max(999.99, "Must be 999.99 or less"),
 });
 
-const idSchema = z.coerce.number().int().positive();
-
 type TeamRow = {
-    id: number;
-    name: string;
-    hours_per_point: string;
+  id: number;
+  name: string;
+  hours_per_point: string;
 };
 
-function toTeam(row: TeamRow){
-    return{
-        id: row.id,
-        name: row.name,
-        hoursPerPoint: Number(row.hours_per_point), 
-    };
+function toTeam(row: TeamRow) {
+  return {
+    id: row.id,
+    name: row.name,
+    hoursPerPoint: Number(row.hours_per_point),
+  };
 }
 
-teamsRouter.post("/",async (req,res)=>{
-    const result = createTeamSchema.safeParse(req.body);
-    if(!result.success){
-        res.status(400).json({
-            error: "Invalid input",
-            details: result.error.issues.map((issues)=>({
-                field: issues.path.join("."),
-                message: issues.message,
-            })),
-        });
-        return;
-    }
+teamsRouter.post("/", async (req, res) => {
+  const result = createTeamSchema.safeParse(req.body);
+  if (!result.success) {
+    sendValidationError(res, result.error);
+    return;
+  }
 
-    const {name,hoursPerPoint} = result.data;
+  const { name, hoursPerPoint } = result.data;
 
-    try{
-        const {rows} = await pool.query<TeamRow>(
-           "INSERT INTO teams (name,hours_per_point) VALUES ($1,$2) RETURNING id, name, hours_per_point", [name, hoursPerPoint], 
-        );
-        res.status(201).json(toTeam(rows[0]));
-    }catch(error){
-        if(error instanceof Error && "code" in error && error.code === "23505"){
-            res.status(409).json({error: "A team with this name already exists"});
-            return;
-        }
-        throw error;
+  try {
+    const { rows } = await pool.query<TeamRow>(
+      "INSERT INTO teams (name, hours_per_point) VALUES ($1, $2) RETURNING id, name, hours_per_point",
+      [name, hoursPerPoint],
+    );
+    res.status(201).json(toTeam(rows[0]));
+  } catch (error) {
+    if (isDatabaseError(error, "23505")) {
+      res.status(409).json({ error: "A team with this name already exists" });
+      return;
     }
+    throw error;
+  }
 });
 
 teamsRouter.get("/", async (_req, res) => {

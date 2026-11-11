@@ -20,3 +20,7 @@ export const pool = new pg.Pool({
 pool.on("error", (error)=>{
     console.error("Unexpected database error:", error.message);
 });
+
+export function isDatabaseError(error: unknown, code: string): error is pg.DatabaseError {
+  return error instanceof pg.DatabaseError && error.code === code;
+}
