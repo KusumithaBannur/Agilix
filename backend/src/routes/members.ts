@@ -1,6 +1,6 @@
 import { type Request, Router } from "express";
 import { z } from "zod";
-import { isDatabaseError, pool } from "../db.js";
+import { isDatabaseError, pool, teamExists } from "../db.js";
 import { idSchema, sendValidationError } from "../validation.js";
 
 export const membersRouter = Router({ mergeParams: true });
@@ -54,10 +54,6 @@ function toMember(row: MemberRow) {
   };
 }
 
-async function teamExists(teamId: number): Promise<boolean> {
-  const { rowCount } = await pool.query("SELECT 1 FROM teams WHERE id = $1", [teamId]);
-  return rowCount === 1;
-}
 
 membersRouter.post("/", async (req: Request<TeamParams>, res) => {
   const teamId = idSchema.safeParse(req.params.teamId);
